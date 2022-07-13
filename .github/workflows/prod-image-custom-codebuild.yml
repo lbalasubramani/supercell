@@ -1,0 +1,44 @@
+name: A-I-codebuild-image-PROD
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch with specified paths changed
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "estate/us-east-1/codebuild_image/**"
+      - "build_specifications/buildspec-codebuild-image.yaml"
+      - ".github/workflows/prod-image-custom-codebuild.yml"
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "custom-codebuild-image"
+  custom-codebuild-image:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Authenticate action with credentials stored as repository secrets
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Initiate Codebuild job for building image
+      - name: Build custom Codebuild image
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        with:
+          project-name: sc-codebuild-custom-image
+          disable-source-override: true
+          buildspec-override: build_specifications/buildspec-codebuild-image.yaml
+          env-vars-for-codebuild: |
+            requester,
+            TERRAFORM_VER,
+            EKS_KUBECTL_VER
+        env:
+          requester: ${{ github.actor }}
+          TERRAFORM_VER: 0.14.3
+          EKS_KUBECTL_VER: 1.17.9/2020-08-04

@@ -1,0 +1,103 @@
+# This workflow is generated with Terraform at estate/PROD-cicd root module
+name: A-T-ps-tools-prod-P
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "estate/us-east-1/eks-01-prod/teams/ps-tools-prod/**"
+      - "!estate/us-east-1/eks-01-prod/teams/rbac/**"
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  terraform-plan:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Run Terraform Team plan in Codebuild
+        id: plan
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        continue-on-error: true
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name: sc-us-east-1-terraform-plan-foundation-teams
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            TF_DATA_DIR,
+            TF_VAR_FILE,
+            EKS_CLUSTER_NAME
+        env:
+          requester: ${{ github.actor }}
+          TF_DATA_DIR: "estate/us-east-1/eks-01-prod/teams/ps-tools-prod"
+          TF_VAR_FILE: "./foundation.tfvars"
+          EKS_CLUSTER_NAME: "eks-01-prod"
+
+      - name: Fetch Team Plan build log for Pull Request
+        id: buildlogs
+        continue-on-error: true
+        run: |
+          BUILD_ID=$(echo $AWS_BUILD_ID | awk -F':' '{print $2}')
+          FULL_LOG_STREAM_NAME="${LOG_STREAM_NAME}/${BUILD_ID}"
+          echo 'PLAN_BUILD_LOG<<EOF' >> $GITHUB_ENV
+          aws logs get-log-events --log-stream-name ${FULL_LOG_STREAM_NAME} \
+            --log-group-name ${LOG_GROUP_NAME} \
+            --output json --query 'events[].message' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+          echo ::set-output name=buildlog::$PLAN_BUILD_LOG
+        env:
+          AWS_BUILD_ID: ${{ steps.plan.outputs.aws-build-id }}
+          LOG_GROUP_NAME: "sc-us-east-1-codebuild-foundation"
+          LOG_STREAM_NAME: "sc-us-east-1-codebuild-foundation-terraform-plan"
+
+      - name: Update Pull Request with Team Plan output
+        uses: actions/github-script@0.9.0
+        continue-on-error: true
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.buildlogs.outputs.buildlog }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const planBuildLog = JSON.parse(process.env.PLAN_BUILD_LOG)
+            var removeEntries = [];
+            for (const event of planBuildLog) {
+              removeEntries.push(event);
+              if(event.includes("--------------")) break;
+            }
+            for (var i=0; i<removeEntries.length; i++) {
+                var index = undefined;
+                while ((index = planBuildLog.indexOf(removeEntries[i])) !== -1) {
+                    planBuildLog.splice(index, 1);
+                }
+            }
+            const terraformPlanOutput = planBuildLog.join('')
+
+            const output = `
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            \`\`\`${terraformPlanOutput}\`\`\`
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+              
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform Team Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

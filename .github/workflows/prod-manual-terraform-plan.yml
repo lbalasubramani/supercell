@@ -1,0 +1,48 @@
+name: M-C-PROD-P
+ 
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      cluster_project:
+        description: "Cluster project"
+        default: "sc"
+        required: true
+      cluster_name:
+        description: "Cluster name to run Terraform plan for"
+        default: "eks-01-prod"
+        required: true
+      cluster_region:
+        description: "Cluster region"
+        default: "us-east-1"
+        required: true
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  manual-terraform-plan:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.cluster_region }}
+
+      - name: Run Terraform plan in Codebuild
+        id: plan
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        continue-on-error: true
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name: ${{ github.event.inputs.cluster_project }}-${{ github.event.inputs.cluster_region }}-${{ github.event.inputs.cluster_name }}-tf-codebuild-plan-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester
+        env:
+          requester: ${{ github.actor }}

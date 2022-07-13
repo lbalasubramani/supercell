@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: analytics-tools-prod-12042021
+  namespace: velero
+spec:
+  schedule: "0 2 * * *" #every day at 2 AM
+  template:
+    hooks: {}
+    includedNamespaces:
+    - analytics-tools-prod-dev
+    - analytics-tools-prod-ops
+    storageLocation: aws
+    ttl: 288h #2 weeks

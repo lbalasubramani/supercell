@@ -1,0 +1,46 @@
+# This workflow is generated with Terraform at estate/NONPROD-cicd root module
+name: A-A-eks-01-nonprod
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: 
+      - feature/**
+    paths:
+      - "k8s_components/**/eks-01-nonprod/**"
+      - "k8s_components/network-policies/**"
+      - "!k8s_components/examples/**"
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  deploy-cluster:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.NONPROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.NONPROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Run ArgoCD deployment in Codebuild
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name:  sc-us-east-1-eks-01-nonprod-tf-codebuild-argocd-dev-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            APPLY_BUILD_ID
+        env:
+          requester: ${{ github.actor }}
+          APPLY_BUILD_ID: ${{ steps.apply.outputs.aws-build-id }}
+
+
+
+
+          

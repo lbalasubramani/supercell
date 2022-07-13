@@ -1,0 +1,58 @@
+name: M-C-PROD-CHINA-A
+
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      cluster_project:
+        description: "Cluster project"
+        default: "sc-china"
+        required: true
+      cluster_name:
+        description: "Cluster name to run Terraform apply for"
+        default: "eks-02-prod-china"
+        required: true
+      cluster_region:
+        description: "Cluster region"
+        default: "cn-northwest-1"
+        required: true
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  manual-terraform-apply:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_CHINA_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_CHINA_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.cluster_region }}
+
+      - name: Run Terraform apply in Codebuild
+        id: apply
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        if: github.ref == 'refs/heads/master'
+        with:
+          project-name: ${{ github.event.inputs.cluster_project }}-${{ github.event.inputs.cluster_region }}-${{ github.event.inputs.cluster_name }}-tf-codebuild-apply-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester
+        env:
+          requester: ${{ github.actor }}
+
+      - name: Run ArgoCD deployment in Codebuild
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        if: github.ref == 'refs/heads/master'
+        with:
+          project-name: ${{ github.event.inputs.cluster_project }}-${{ github.event.inputs.cluster_region }}-${{ github.event.inputs.cluster_name }}-tf-codebuild-argocd-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            APPLY_BUILD_ID
+        env:
+          requester: ${{ github.actor }}
+          APPLY_BUILD_ID: ${{ steps.apply.outputs.aws-build-id }}

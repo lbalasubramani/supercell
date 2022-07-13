@@ -1,0 +1,56 @@
+# This workflow is generated with Terraform at estate/NONPROD-cicd root module
+name: A-C-eks-02-nonprod-china-A
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [master]
+    paths:
+      - "estate/cn-northwest-1/eks-02-nonprod-china/**"
+      - "!estate/cn-northwest-1/eks-02-nonprod-china/teams/**"
+      - "k8s_components/**/eks-02-nonprod-china/**"
+      - "k8s_components/network-policies/**"
+      - "!k8s_components/examples/**"
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  deploy-cluster:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.NONPROD_CHINA_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.NONPROD_CHINA_AWS_SECRET_ACCESS_KEY }}
+          aws-region: cn-northwest-1
+
+      - name: Run Terraform apply in Codebuild
+        id: apply
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name: sc-china-cn-northwest-1-eks-02-nonprod-china-tf-codebuild-apply-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester
+        env:
+          requester: ${{ github.actor }}
+
+      - name: Run ArgoCD deployment in Codebuild
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name:  sc-china-cn-northwest-1-eks-02-nonprod-china-tf-codebuild-argocd-estate
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            APPLY_BUILD_ID
+        env:
+          requester: ${{ github.actor }}
+          APPLY_BUILD_ID: ${{ steps.apply.outputs.aws-build-id }}

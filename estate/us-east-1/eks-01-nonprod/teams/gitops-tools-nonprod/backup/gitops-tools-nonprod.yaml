@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: scheduled-gitops-tools-nonprod-09042021-dbladzich
+  namespace: velero
+spec:
+  schedule: "0 * * * *"
+  template:
+    hooks: {}
+    includedNamespaces:
+    - gitops-tools-nonprod-ops
+    - gitops-tools-nonprod-dev
+    storageLocation: aws
+    ttl: 1h

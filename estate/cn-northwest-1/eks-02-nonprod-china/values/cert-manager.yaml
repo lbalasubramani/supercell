@@ -1,0 +1,14 @@
+values: |
+  image:
+    repository: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/jetstack/cert-manager-controller
+  extraArgs:
+    - "--acme-http01-solver-image=508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/jetstack/cert-manager-acmesolver:v1.5.3"
+  webhook:
+    image:
+      repository: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/jetstack/cert-manager-webhook
+  cainjector:
+    image:
+      repository: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/jetstack/cert-manager-cainjector
+  startupapicheck:
+    image:
+      repository: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/jetstack/cert-manager-ctl

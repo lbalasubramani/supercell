@@ -1,0 +1,22 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo ${requester} started build
+      - echo ${APPLY_BUILD_ID}
+      - echo Updating cluster configuration
+      - aws eks update-kubeconfig --name=$EKS_CLUSTER_NAME
+      - aws s3 cp $ARTIFACT_BUCKET/${APPLY_BUILD_ID}/output.zip output.zip
+      - unzip output.zip
+#      - ./build_specifications/scripts/opa-validate.sh -d ./k8s_components/opa
+  build:
+    commands:
+      - ./build_specifications/scripts/argocd-setup.sh -p $ARGOCD_PASSWORD -r $REPOSITORY_SECRET -s $SLACK_TOKEN -k ${EKS_CLUSTER_NAME}
+      - ./build_specifications/scripts/argocd-applications.sh -o output.json -e $ENVIRONMENT -d ./k8s_components -k ${EKS_CLUSTER_NAME}
+  post_build:
+    commands:
+      - echo Build job finished

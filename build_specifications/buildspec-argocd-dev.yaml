@@ -1,0 +1,25 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo ${requester} started build
+      - echo ${APPLY_BUILD_ID}
+      - cd $TF_DATA_DIR
+      - cp /usr/local/bin/tf-plugins/.terraform.lock.hcl .
+      - terraform init --backend-config=./backend.tfvars -plugin-dir=/usr/local/bin/tf-plugins/.terraform/providers
+      - terraform output -json > $CODEBUILD_SRC_DIR/output.json
+      - echo Updating cluster configuration
+      - aws eks update-kubeconfig --name=$EKS_CLUSTER_NAME
+#      - ./build_specifications/scripts/opa-validate.sh -d ./k8s_components/opa
+  build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR
+      - ./build_specifications/scripts/argocd-setup.sh -p $ARGOCD_PASSWORD -r $REPOSITORY_SECRET -s $SLACK_TOKEN -k ${EKS_CLUSTER_NAME}
+      - ./build_specifications/scripts/argocd-applications.sh -o output.json -e $ENVIRONMENT -d ./k8s_components -k ${EKS_CLUSTER_NAME}
+  post_build:
+    commands:
+      - echo Build job finished

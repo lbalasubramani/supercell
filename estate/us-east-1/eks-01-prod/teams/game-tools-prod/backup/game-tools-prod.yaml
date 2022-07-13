@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: game-tools-prod-27042021
+  namespace: velero
+spec:
+  schedule: "0 2 * * *" #every day at 2 AM
+  template:
+    hooks: {}
+    includedNamespaces:
+    - game-tools-prod-dev
+    - game-tools-prod-ops
+    storageLocation: aws
+    ttl: 288h #2 weeks

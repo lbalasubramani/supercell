@@ -1,0 +1,129 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: managed-service-team-grafana
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    helm:
+      parameters:
+        - name: "sidecar.image.repository"
+          value: "508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/kiwigrid/k8s-sidecar"
+        - name: "image.repository"
+          value: "508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/grafana/grafana"
+        - name: "sidecar.image.tag"
+          value: "0.1.209" 
+        - name: "image.tag"
+          value: "7.2.1"
+        - name: "podLabels.prometheus"
+          value: "managed-service-team-prometheus"
+        - name: "podLabels.purpose"
+          value: "monitoring"
+        - name: "defaultDashboardsEnabled"
+          value: "true"
+        - name: "sidecar.dashboards.enabled"
+          value: "true"
+        - name: "sidecar.dashboards.searchNamespace"
+          value: "managed-service-team"
+        - name: "sidecar.dashboards.label"
+          value: "grafana_dashboard"
+        - name: "sidecar.datasources.enabled"
+          value: "true"
+        - name: "sidecar.datasources.searchNamespace"
+          value: "managed-service-team"
+        - name: "sidecar.datasources.label"
+          value: "grafana_datasource"
+        - name: "resources.limits.cpu"
+          value: "100m"
+        - name: "resources.limits.memory"
+          value: "128Mi"
+        - name: "resources.requests.cpu"
+          value: "100m"
+        - name: "resources.requests.memory"
+          value: "128Mi"
+        - name: "downloadDashboards.resources.requests.cpu"
+          value: "100m"
+        - name: "downloadDashboards.resources.requests.memory"
+          value: "128Mi"
+        - name: "downloadDashboards.resources.limits.cpu"
+          value: "100m"
+        - name: "downloadDashboards.resources.limits.memory"
+          value: "128Mi"
+        - name: "initChownData.resources.requests.cpu"
+          value: "100m"
+        - name: "initChownData.resources.requests.memory"
+          value: "128Mi"
+        - name: "initChownData.resources.limits.cpu"
+          value: "100m"
+        - name: "initChownData.resources.limits.memory"
+          value: "128Mi"
+        - name: "sidecar.resources.requests.cpu"
+          value: "100m"
+        - name: "sidecar.resources.requests.memory"
+          value: "128Mi"
+        - name: "sidecar.resources.limits.cpu"
+          value: "100m"
+        - name: "sidecar.resources.limits.memory"
+          value: "128Mi"
+        - name: "imageRenderer.resources.requests.cpu"
+          value: "100m"
+        - name: "imageRenderer.resources.requests.memory"
+          value: "128Mi"
+        - name: "imageRenderer.resources.limits.cpu"
+          value: "100m"
+        - name: "imageRenderer.resources.limits.memory"
+          value: "128Mi"
+        - name: "persistence.enabled"
+          value: "true"
+        - name: "persistence.type"
+          value: "pvc"
+        - name: "persistence.size"
+          value: "15Gi"
+        - name: "persistence.storageClassName"
+          value: "gp2"
+        - name: "rbac.pspUseAppArmor"
+          value: "false"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    helm:
+      values: |
+        extraVolumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com.cn
+                expirationSeconds: 86400
+                path: token
+      valueFiles:
+      - values.yaml 
+      parameters:
+      - name: "image.repository"
+        value: "508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/velero/velero"
+      - name: "image.tag"
+        value: "v1.5.3"
+      - name: "initContainers[0].image"
+        value: "508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/velero/velero-plugin-for-aws:v1.1.0"
+      - name: "configuration.backupStorageLocation.bucket"
+        value: "eks-02-prod-china-k8s-cluster-backups"
+      - name: "configuration.backupStorageLocation.prefix"
+        value: "clusters/eks-02-prod-china"
+      - name: "configuration.backupStorageLocation.config.region"
+        value: "cn-northwest-1"
+      - name: "configuration.backupStorageLocation.config.kmsKeyId"
+        value: "alias/s3-backup-eks-02-prod-china"
+      - name: "configuration.volumeSnapshotLocation.config.region"
+        value: "cn-northwest-1"
+      - name: "serviceAccount.server.annotations.eks\\.amazonaws\\.com/role-arn"
+        value: "arn:aws-cn:iam::830619862888:role/eks-02-prod-china-VeleroRole"

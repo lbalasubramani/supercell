@@ -1,0 +1,94 @@
+name: M-T-P
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      team_name:
+        description: |
+          Enter one of below teams:
+          analytics-tools-nonprod
+          devops-tools-nonprod
+          game-tools-nonprod
+          gitops-tools-nonprod
+          ps-tools-nonprod
+          services-tools-nonprod
+          analytics-tools-prod
+          ps-tools-prod
+          game-tools-prod
+          services-tools-prod
+        required: true
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  manual-team-terraform-plan:
+    name: "RUNNING TF PLAN FOR ${{ github.event.inputs.team_name }}"
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    env:
+      TEAMS_ARRAY: '
+      - analytics-tools-nonprod
+      - devops-tools-nonprod
+      - game-tools-nonprod
+      - gitops-tools-nonprod
+      - ps-tools-nonprod
+      - services-tools-nonprod
+      - analytics-tools-prod
+      - ps-tools-prod
+      - game-tools-prod
+      - services-tools-prod
+      '
+
+    steps:
+
+      - name: Fail workflow for non-existent teams
+        id: check_team_name
+        if: ${{ !contains(env.TEAMS_ARRAY, github.event.inputs.team_name) }}
+        uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('BAD TEAM NAME! DOUBLE CHECK.')
+
+      - name: Configure AWS Credentials if NONPROD
+        if: ${{ success() && endsWith(github.event.inputs.team_name, '-nonprod') }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.NONPROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.NONPROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure AWS Credentials if PROD
+        if: ${{ success() && endsWith(github.event.inputs.team_name, '-prod') }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure cluster name NONPROD
+        if: ${{ success() && endsWith(github.event.inputs.team_name, '-nonprod') }}
+        run: echo "EKS_CLUSTER_NAME=eks-01-nonprod" >> $GITHUB_ENV
+
+      - name: Configure cluster name PROD
+        if: ${{ success() && endsWith(github.event.inputs.team_name, '-prod') }}
+        run: echo "EKS_CLUSTER_NAME=eks-01-prod" >> $GITHUB_ENV
+
+      - name: "tf plan ${{ github.event.inputs.team_name }}"
+        if: ${{ success() }}
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        continue-on-error: true
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name: sc-us-east-1-terraform-plan-foundation-teams
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            TF_DATA_DIR,
+            TF_VAR_FILE,
+            EKS_CLUSTER_NAME
+        env:
+          requester: ${{ github.actor }}
+          TF_DATA_DIR: "estate/us-east-1/${{ env.EKS_CLUSTER_NAME }}/teams/${{ github.event.inputs.team_name }}"
+          TF_VAR_FILE: "./foundation.tfvars"

@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: community-tools-prod-11112021
+  namespace: velero
+spec:
+  schedule: "0 2 * * *" #every day at 2 AM
+  template:
+    hooks: {}
+    includedNamespaces:
+    - community-tools-prod-dev
+    - community-tools-prod-ops
+    storageLocation: aws
+    ttl: 288h #2 weeks

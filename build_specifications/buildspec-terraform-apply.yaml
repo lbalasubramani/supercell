@@ -1,0 +1,29 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo ${requester} started build
+      - cd $TF_DATA_DIR
+      - cp /usr/local/bin/tf-plugins/.terraform.lock.hcl .
+      - terraform init --backend-config=./backend.tfvars -plugin-dir=/usr/local/bin/tf-plugins/.terraform/providers
+
+  build:
+    commands:
+      - echo Updating cluster configuration
+      - aws eks update-kubeconfig --name=$(terraform output -json | jq -r .cluster.value.eks.cluster_id)
+      - terraform apply -var-file=$TF_VAR_FILE -auto-approve
+      - $CODEBUILD_SRC_DIR/build_specifications/scripts/psp.sh -d $CODEBUILD_SRC_DIR/modules/service/eks-cluster/manifests/psp
+  post_build:
+    commands:
+      - |
+        bash <<EOF 
+          terraform output -json > ./output.json
+          zip -r output.zip ./output.json
+          aws s3 cp output.zip $ARTIFACT_BUCKET/$CODEBUILD_BUILD_ID/output.zip
+          aws s3 cp $ARTIFACT_BUCKET/$CODEBUILD_BUILD_ID/output.zip $ARTIFACT_BUCKET/$EKS_CLUSTER_REGION/$EKS_CLUSTER_NAME/output.zip
+        EOF
+      - echo terraform apply completed on `date`

@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo ${requester} started build
+      - cd $TF_DATA_DIR
+      - cp /usr/local/bin/tf-plugins/.terraform.lock.hcl .
+      - terraform init --backend-config=./backend.tfvars -plugin-dir=/usr/local/bin/tf-plugins/.terraform/providers
+
+  build:
+    commands:
+      - echo Updating cluster configuration
+      - aws eks update-kubeconfig --name=$(terraform output -json | jq -r .cluster.value.eks.cluster_id)
+      - terraform plan -var-file=$TF_VAR_FILE -out=plan -no-color
+
+  post_build:
+    commands:
+      - echo terraform plan completed on `date`

@@ -1,0 +1,83 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/supercell/kube-foundation.git
+    targetRevision: master
+    path: k8s_components/aws-load-balancer-controller
+    helm:
+      parameters:
+      - name: "clusterName"
+        value: eks-01-nonprod
+      valueFiles:
+      - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aws-load-balancer-controller
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns-analytics-prod-aws
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/supercell/kube-foundation.git
+    targetRevision: master
+    path: k8s_components/external-dns
+    helm:
+      parameters:
+      - name: "external-dns.aws.region"
+        value: us-east-1
+      valueFiles:
+      - eks-01-nonprod/values-external-dns-analytics-prod-aws.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns-services-prod-aws
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/supercell/kube-foundation.git
+    targetRevision: master
+    path: k8s_components/external-dns
+    helm:
+      parameters:
+      - name: "external-dns.aws.region"
+        value: us-east-1
+      valueFiles:
+      - eks-01-nonprod/values-external-dns-services-prod-aws.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true

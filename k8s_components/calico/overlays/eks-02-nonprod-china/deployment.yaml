@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-typha-horizontal-autoscaler
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: autoscaler
+          image: 830619862888.dkr.ecr.cn-northwest-1.amazonaws.com.cn/sc-china-k8s-cluster-images:cluster-proportional-autoscaler-amd64-1.7.1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-typha
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: calico-typha
+          image: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/calico/typha:v3.13.4
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: calico-node
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: calico-node
+          image: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/quay.io/calico/node:v3.13.4

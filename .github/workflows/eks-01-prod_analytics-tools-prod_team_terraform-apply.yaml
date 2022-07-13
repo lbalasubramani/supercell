@@ -1,0 +1,45 @@
+# This workflow is generated with Terraform at estate/PROD-cicd root module
+name:  A-T-analytics-tools-prod-A
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [master]
+    paths:
+      - "estate/us-east-1/eks-01-prod/teams/analytics-tools-prod/**"
+      - "!estate/us-east-1/eks-01-prod/teams/rbac/**"
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  deploy-cluster:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Run Terraform apply in Codebuild
+        id: apply
+        uses: nordcloud/aws-codebuild-run-build@eb51c727d4f425e6a7d9bdeb95766c4c402ab83a
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        with:
+          # IMPORTANT, change codebuild project name here
+          project-name: sc-us-east-1-terraform-apply-foundation-teams
+          disable-source-override: true
+          env-vars-for-codebuild: |
+            requester,
+            TF_DATA_DIR,
+            TF_VAR_FILE,
+            EKS_CLUSTER_NAME
+        env:
+          requester: ${{ github.actor }}
+          TF_DATA_DIR: "estate/us-east-1/eks-01-prod/teams/analytics-tools-prod"
+          TF_VAR_FILE: "./foundation.tfvars"
+          EKS_CLUSTER_NAME: "eks-01-prod"

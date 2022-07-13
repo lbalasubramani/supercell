@@ -1,0 +1,107 @@
+values: |
+  image:
+    name: 508085692393.dkr.ecr.cn-northwest-1.amazonaws.com.cn/mirror/traefik
+    tag: "v2.5.2"
+    pullPolicy: IfNotPresent
+  deployment:
+    replicas: 1
+    labels:
+      owner: juho.arenius
+    podLabels:
+      owner: juho.arenius
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+  ingressClass:
+    enabled: true
+    isDefaultClass: false
+    fallbackApiVersion: "v1"
+  ingressRoute:
+    dashboard:
+      enabled: false
+      labels:
+        owner: juho.arenius
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+  providers:
+    kubernetesCRD:
+      enabled: true
+      namespaces: []
+    kubernetesIngress:
+      enabled: true
+      namespaces: []
+      publishedService:
+        enabled: true
+  logs:
+    general:
+      level: DEBUG
+    access:
+      enabled: true
+      format: json
+      filters: {}
+      fields:
+        general:
+          defaultmode: keep
+          names: {}
+        headers:
+          defaultmode: keep
+          names: {}
+  globalArguments:
+  - "--api.insecure=true"
+  additionalArguments:
+  - "--providers.kubernetesingress.ingressclass=traefik-secure"
+  - "--entrypoints.websecure.http.tls"
+  - "--metrics.prometheus=true"
+  - "--pilot.dashboard=false"
+  service:
+    enabled: true
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    labels:
+      owner: juho.arenius
+    spec:
+      externalTrafficPolicy: Local
+  ports:
+    traefik:
+      port: 9000
+      expose: false
+      exposedPort: 9000
+      protocol: TCP
+    web:
+      port: 8000
+      expose: true
+      exposedPort: 80
+      protocol: TCP
+      #redirectTo: websecure
+    websecure:
+      port: 8443
+      expose: true
+      exposedPort: 443
+      protocol: TCP
+      tls:
+        enabled: false
+        options: ""
+        certResolver: ""
+        domains: []
+  autoscaling:
+    enabled: false
+  rbac:
+    enabled: true
+    namespaced: false
+  podSecurityPolicy:
+    enabled: false
+  serviceAccount:
+    name: ""
+  serviceAccountAnnotations: {}
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "256Mi"
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []

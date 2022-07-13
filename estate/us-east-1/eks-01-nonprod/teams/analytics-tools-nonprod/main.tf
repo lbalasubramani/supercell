@@ -1,0 +1,21 @@
+module "analytics-tools-nonprod" {
+  source                                       = "../../../../../modules/service/eks-team"
+  team_name                                    = var.team_name
+  cluster_name                                 = var.cluster_name
+  vpc_id                                       = var.vpc_id
+  dedicated_resource_account_role              = var.dedicated_resource_account_role
+  enable_subnet_share                          = var.enable_subnet_share
+  dedicated_security_group_enable              = var.dedicated_security_group_enable
+  network_policy_enable                        = var.network_policy_enable
+  allowed_rules_in_dev_namespace               = var.allowed_rules_in_dev_namespace
+  allowed_rules_in_ops_namespace               = var.allowed_rules_in_ops_namespace
+  dedicated_resource_account                   = var.dedicated_resource_account
+  additional_security_groups                   = var.additional_security_groups
+  additional_security_groups_k8s_configuration = var.additional_security_groups_k8s_configuration
+  permissive_rbac_dev                          = var.permissive_rbac_dev
+  permissive_rbac_ops                          = var.permissive_rbac_ops
+  extended_rbac_rules_dev                      = var.extended_rbac_rules_dev
+  extended_rbac_rules_ops                      = var.extended_rbac_rules_ops
+  team_jenkins_service_account_name            = var.team_jenkins_service_account_name
+  additional_sc_groups                         = var.additional_sc_groups
+}
