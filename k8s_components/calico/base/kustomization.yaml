@@ -6,6 +6,13 @@ resources:
 patches:
   - patch.yaml
 
+images:
+- name: quay.io/calico/node
+  newTag: v3.23.2 
+
+- name: quay.io/calico/typha 
+  newTag: v3.23.2
+
 
 
 
