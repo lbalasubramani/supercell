@@ -3,6 +3,9 @@ kind: Kustomization
 resources:
 - calico.yaml
 
+patches:
+  - patch.yaml
+
 
 
 
