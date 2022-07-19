@@ -3,9 +3,6 @@ kind: Kustomization
 resources:
 - calico.yaml
 
-patches:
-  - patch.yaml
-
 images:
 - name: quay.io/calico/node
   newTag: v3.23.2 
