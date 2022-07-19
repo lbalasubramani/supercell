@@ -4,8 +4,8 @@ bases:
   - ../../base
   
 images:
-- name: quay.io/calico/node
+- name: calico/node
   newTag: v3.23.2 
 
-- name: quay.io/calico/typha 
+- name: calico/typha 
   newTag: v3.23.2
