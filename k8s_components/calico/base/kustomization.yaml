@@ -7,7 +7,7 @@ images:
 - name: quay.io/calico/node
   newTag: v3.21.4
 
-- name: quay.io/calico/typha 
+- name: docker.io/calico/typha 
   newTag: v3.21.4
 
 
